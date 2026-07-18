@@ -9,7 +9,7 @@ Here's a broader list of system design concepts, patterns, and principles organi
 - **Hexagonal Architecture (Ports & Adapters)**
 - **Service Mesh** (e.g., Istio, Linkerd)
 - **Backend for Frontend (BFF)**
-- **Strangler Fig Pattern** (you mentioned this — migrating legacy systems incrementally)
+- **Strangler Fig Pattern** (migrating legacy systems incrementally)
 - **Sidecar Pattern**
 - **Ambassador Pattern**
 
@@ -22,8 +22,8 @@ Here's a broader list of system design concepts, patterns, and principles organi
 - **Long Polling / WebSockets / Server-Sent Events**
 
 ## Data Management Patterns
-- **CQRS** (you mentioned)
-- **Event Sourcing** (you mentioned)
+- **CQRS**
+- **Event Sourcing**
 - **Database per Service**
 - **Shared Database (anti-pattern usually)**
 - **Sharding / Partitioning**
@@ -35,8 +35,8 @@ Here's a broader list of system design concepts, patterns, and principles organi
 - **Eventual Consistency vs Strong Consistency**
 
 ## Resilience & Fault Tolerance
-- **Circuit Breaker** (you mentioned)
-- **Retry Pattern** (you mentioned)
+- **Circuit Breaker**
+- **Retry Pattern** 
 - **Timeout Pattern**
 - **Bulkhead Pattern**
 - **Fallback Pattern**
@@ -47,8 +47,8 @@ Here's a broader list of system design concepts, patterns, and principles organi
 - **Chaos Engineering**
 
 ## Scalability & Performance
-- **Vertical Scaling / Horizontal Scaling** (you mentioned)
-- **Load Balancer** (you mentioned) — types: Round Robin, Least Connections, IP Hash
+- **Vertical Scaling / Horizontal Scaling**
+- **Load Balancer** (types: Round Robin, Least Connections, IP Hash
 - **Caching** (Client-side, CDN, Server-side, Distributed — Redis/Memcached)
 - **Cache Invalidation strategies** (write-through, write-back, write-around)
 - **Content Delivery Network (CDN)**
@@ -56,19 +56,19 @@ Here's a broader list of system design concepts, patterns, and principles organi
 - **Connection Pooling**
 - **Read Replicas**
 - **Auto-scaling**
-- **Latency vs Throughput** (you mentioned)
+- **Latency vs Throughput**
 - **Batching**
 - **Compression**
 
 ## Discovery & Routing
-- **Service Registry** (you mentioned)
+- **Service Registry**
 - **Service Discovery** (Client-side vs Server-side)
-- **API Gateway** (you mentioned)
+- **API Gateway**
 - **DNS-based Routing**
 - **Reverse Proxy**
 
 ## Distributed Systems Concepts
-- **Saga Pattern** (you mentioned)
+- **Saga Pattern**
 - **Consensus Algorithms** (Raft, Paxos)
 - **Leader Election**
 - **Distributed Locking**
