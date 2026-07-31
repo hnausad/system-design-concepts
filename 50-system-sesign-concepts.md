@@ -6,6 +6,7 @@
 ### Distributed systems concepts 
 ### Reliability and modern concepts
 
+
 # Section 1: Core Infrastructure Concepts (1-10)
 
 ## 1. Scalability
