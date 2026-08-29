@@ -1,3 +1,53 @@
+Here's a practical decision framework — think of it as a series of filters, not a single formula.
+
+## Step 1: Default to Monolith Unless Proven Otherwise
+
+Start here always. Monolith is the lowest-risk, lowest-cost, fastest-to-build option. You only move away from it when specific pain points force you to.
+
+## Step 2: Ask These Questions in Order
+
+**Q1: Is the team small (1 team, roughly under ~8-10 engineers)?**
+→ Yes: Stay monolith. One team can't meaningfully benefit from splitting into services they all still have to coordinate on.
+→ No, multiple teams: Continue to Q2.
+
+**Q2: Do different teams need to deploy independently without blocking each other?**
+→ No: A **modular monolith** gives you clean boundaries without deployment overhead.
+→ Yes: This is a real signal for services. Continue to Q3.
+
+**Q3: Do different parts of the system have wildly different scaling needs?**
+Example: your image-processing pipeline needs 50 servers, but your user-settings page needs 2.
+→ No: Modular monolith likely still works — you can scale the whole thing together.
+→ Yes: This supports splitting that specific piece out.
+
+**Q4: Are the components loosely coupled in data and transactions?**
+Ask: "If Service A goes down, does Service B *have* to know synchronously, or can it tolerate a delay?"
+→ Tightly coupled (need same transaction/consistency guarantees): Keep them together, even if teams differ. Splitting here creates distributed transaction nightmares.
+→ Loosely coupled (can communicate via events, tolerate eventual consistency): Safe to split.
+
+**Q5: Can your organization actually operate microservices?**
+This means: monitoring/observability, CI/CD pipelines per service, on-call rotation, service discovery, handling network failures gracefully.
+→ No: Don't do it yet, regardless of the answers above. Build that capability first, or stay modular monolith.
+→ Yes: Microservices become viable.
+
+## Step 3: A Simple Decision Table
+
+| Signal | Monolith | Modular Monolith | Microservices |
+|---|---|---|---|
+| Team size | 1 small team | 1-2 teams | Multiple independent teams |
+| Requirements | Unclear/evolving | Fairly stable | Well-understood, stable boundaries |
+| Scaling needs | Uniform | Uniform | Wildly different per component |
+| Coupling | Tight | Tight-to-moderate | Loose, event-driven ok |
+| Ops maturity | N/A | Low-to-moderate | High (needed) |
+| Deploy independence | Not needed | Not needed | Required |
+
+## Step 4: Remember the Escape Hatch
+
+You can **evolve** — start monolith → refactor into modular monolith as it grows → extract specific modules into services *only when a concrete, painful problem appears* (e.g., "our search feature needs 10x the servers of everything else" or "the payments team keeps blocking on the catalog team's deploys").
+
+**The rule of thumb:** Don't split because it "seems more scalable" or "more modern." Split because you have a *specific, currently-existing pain* that a monolith can't solve — and you've confirmed your team can handle the operational cost of the split.
+
+If you want, give me a real (or hypothetical) system you're thinking about, and I'll walk through this framework with you on that actual case.
+
 Here's a structural comparison of the three, looking at what actually changes at each layer.
 
 ## 1. Codebase Structure
