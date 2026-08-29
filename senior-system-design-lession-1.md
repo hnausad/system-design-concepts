@@ -867,3 +867,586 @@ For example:
 Try to ask me **5–8 requirements questions** as if I were the interviewer.
 
 I'll answer each one, and then we'll continue the interview step-by-step into **Lesson 2: Capacity Estimation**, using the answers we establish.
+
+
+Exactly. 👍 This is a **very good requirements-gathering template**. I would make one important refinement for senior interviews:
+
+> **Don't just ask questions — connect each answer to an architectural decision.**
+
+That is what demonstrates senior-level system-design thinking.
+
+# Lesson 1 — Final Requirements Framework
+
+Use this as your **mental checklist** in almost every interview.
+
+```text
+                    SYSTEM DESIGN QUESTION
+                            │
+                            ▼
+                  ┌───────────────────┐
+                  │ 1. FUNCTIONAL     │
+                  │    REQUIREMENTS   │
+                  └─────────┬─────────┘
+                            │
+             ┌──────────────┼──────────────┐
+             ▼              ▼              ▼
+          Features        Users          Flows
+                            │
+                            ▼
+                  ┌───────────────────┐
+                  │ 2. SCALE          │
+                  └─────────┬─────────┘
+                            │
+             ┌──────────────┼──────────────┐
+             ▼              ▼              ▼
+           Users           QPS          Data
+                            │
+                            ▼
+                  ┌───────────────────┐
+                  │ 3. PERFORMANCE    │
+                  └─────────┬─────────┘
+                            │
+                       Latency/QPS
+                            │
+                            ▼
+                  ┌───────────────────┐
+                  │ 4. CONSISTENCY    │
+                  └─────────┬─────────┘
+                            │
+                     Strong/Eventual
+                            │
+                            ▼
+                  ┌───────────────────┐
+                  │ 5. AVAILABILITY   │
+                  └─────────┬─────────┘
+                            │
+                      99.9 / 99.99%
+                            │
+                            ▼
+                  ┌───────────────────┐
+                  │ 6. DURABILITY     │
+                  └─────────┬─────────┘
+                            │
+                       Data loss?
+                            │
+                            ▼
+                  ┌───────────────────┐
+                  │ 7. CONSTRAINTS    │
+                  └───────────────────┘
+```
+
+---
+
+# 1. Functional Requirements
+
+Ask:
+
+### A. What should the system do?
+
+> "What are the core use cases?"
+
+Example — Twitter:
+
+```text
+User
+ ├── Create post
+ ├── Follow user
+ ├── View feed
+ ├── Like post
+ └── Comment
+```
+
+Don't worry about architecture yet.
+
+---
+
+### B. Who are the users?
+
+Ask:
+
+> "Who are the primary users and what are their main workflows?"
+
+For example:
+
+```text
+Twitter
+
+Normal User
+   ↓
+Read feed
+Create post
+Follow users
+
+Admin
+   ↓
+Moderate content
+Suspend users
+```
+
+Different users can have completely different requirements.
+
+---
+
+### C. What happens when something fails?
+
+This is a **very senior-level question**.
+
+For example:
+
+> "What should happen if payment succeeds but order creation fails?"
+
+Now you're thinking about:
+
+```text
+Transactions
+Idempotency
+Retries
+Saga
+Compensation
+Consistency
+```
+
+This question connects **requirements → failure handling → architecture**.
+
+---
+
+# 2. Scale
+
+Ask:
+
+> "What is the expected scale?"
+
+Break it down.
+
+### Users
+
+```text
+Total users = ?
+DAU = ?
+MAU = ?
+```
+
+### Traffic
+
+```text
+Average QPS = ?
+Peak QPS = ?
+Read QPS = ?
+Write QPS = ?
+```
+
+### Data
+
+```text
+Current data = ?
+Data growth/day = ?
+Data retention = ?
+```
+
+This leads directly into our next lesson:
+
+# **Capacity Estimation**
+
+---
+
+# 3. Latency
+
+Ask:
+
+> "What latency do we need?"
+
+Don't just ask:
+
+> "How fast?"
+
+Instead:
+
+```text
+API
+p95 < 200 ms
+
+Critical API
+p99 < 500 ms
+
+Batch processing
+Can take minutes
+```
+
+This distinction is important.
+
+For example:
+
+### Search
+
+```text
+p95 < 200 ms
+```
+
+### Monthly report
+
+```text
+5 minutes is acceptable
+```
+
+They require completely different architectures.
+
+---
+
+# 4. Read vs Write
+
+This is one of my favorite questions:
+
+> **"What is the expected read-to-write ratio?"**
+
+Suppose:
+
+```text
+100 reads
+10 writes
+```
+
+Then:
+
+```text
+10 : 1
+```
+
+Read-heavy.
+
+You might consider:
+
+```text
+Cache
+Read replicas
+CDN
+Search indexes
+```
+
+But if:
+
+```text
+10 reads
+100 writes
+```
+
+then you're dealing with a write-heavy system.
+
+Possible considerations:
+
+```text
+Partitioning
+Write-optimized storage
+Batching
+Queues
+Append-only architecture
+```
+
+So one question can dramatically change your design.
+
+---
+
+# 5. Consistency
+
+Ask:
+
+> **"Does every read need to immediately reflect the latest write?"**
+
+Think about:
+
+### Social media
+
+```text
+Like count
+
+100 → 101
+
+Some users temporarily seeing 100
+may be acceptable.
+```
+
+### Banking
+
+```text
+Balance
+
+₹10,000 → ₹8,000
+```
+
+You generally need much stronger correctness guarantees.
+
+So:
+
+```text
+Social Feed
+→ Eventual consistency may be acceptable
+
+Financial transaction
+→ Strong consistency is much more important
+```
+
+---
+
+# 6. Availability
+
+Ask:
+
+> "What's the availability requirement?"
+
+For example:
+
+```text
+99.9%
+99.99%
+99.999%
+```
+
+And then ask:
+
+> "Is the requirement for the entire system or only critical operations?"
+
+For example:
+
+```text
+Product browsing
+→ 99.9%
+
+Payment
+→ 99.99%+
+```
+
+This can affect:
+
+```text
+Replication
+Multi-AZ
+Multi-region
+Failover
+Disaster Recovery
+```
+
+---
+
+# 7. Durability
+
+Ask:
+
+> **"Can we ever lose data?"**
+
+For a social-media analytics event:
+
+```text
+Losing a small amount
+→ potentially acceptable
+```
+
+For:
+
+```text
+Payment
+Order
+Bank transaction
+```
+
+you need extremely strong durability.
+
+This affects:
+
+```text
+Replication
+Backups
+Write acknowledgement
+Storage
+Disaster recovery
+```
+
+---
+
+# 8. Constraints
+
+Finally ask:
+
+```text
+Security?
+Compliance?
+Existing systems?
+Legacy systems?
+Cloud/provider restrictions?
+Budget?
+Geography?
+Data residency?
+```
+
+But don't spend five minutes asking questions that don't affect your design.
+
+---
+
+# The Senior Engineer Trick
+
+Here's the difference I want you to practice.
+
+### Junior approach
+
+> "How many users?"
+
+### Better
+
+> "How many users and what is the expected peak traffic?"
+
+### Senior
+
+> "What's the expected DAU and peak read/write QPS? That will help determine whether we need caching, horizontal scaling, database partitioning, or read replicas."
+
+**The third answer demonstrates engineering reasoning.**
+
+---
+
+# One More Important Addition
+
+I would add one question to your list:
+
+## "What is explicitly OUT OF SCOPE?"
+
+For example:
+
+> "For this design, I'll focus on creating and reading the feed. I'll keep recommendations, advertisements, and content moderation out of scope."
+
+This prevents the interview from becoming:
+
+```text
+Twitter
+ ├── Feed
+ ├── Search
+ ├── Ads
+ ├── Recommendations
+ ├── Messaging
+ ├── Video
+ ├── Payments
+ ├── Moderation
+ ├── Analytics
+ └── ...
+```
+
+Instead:
+
+```text
+                    Twitter
+                       │
+                       ▼
+                 ┌───────────┐
+                 │   Feed    │
+                 └───────────┘
+                       │
+             ┌─────────┴─────────┐
+             ▼                   ▼
+          Create                Read
+          Tweet                 Feed
+```
+
+Now you can actually finish the design in an interview.
+
+---
+
+# Your Interview Cheat Sheet
+
+Before drawing **any architecture**, remember:
+
+```text
+┌───────────────────────────────────────┐
+│       REQUIREMENTS CHECKLIST          │
+├───────────────────────────────────────┤
+│                                       │
+│ 1. What are the core features?       │
+│ 2. Who are the users?                │
+│ 3. What are the primary workflows?   │
+│ 4. What is in/out of scope?          │
+│                                       │
+│ 5. How many users?                   │
+│ 6. DAU / MAU?                        │
+│ 7. Average & Peak QPS?               │
+│ 8. Read / Write ratio?               │
+│ 9. Data size & growth?               │
+│                                       │
+│ 10. Latency requirement?             │
+│ 11. Availability requirement?        │
+│ 12. Consistency requirement?         │
+│ 13. Durability requirement?          │
+│                                       │
+│ 14. Security/compliance?             │
+│ 15. Global or regional?              │
+│ 16. Existing/legacy systems?        │
+│ 17. What happens when things fail?  │
+│                                       │
+└───────────────────────────────────────┘
+```
+
+## The mental model
+
+Most importantly, remember this chain:
+
+```text
+Requirement
+     ↓
+Constraint
+     ↓
+Architectural Decision
+     ↓
+Trade-off
+```
+
+Example:
+
+```text
+10M DAU
+   ↓
+High traffic
+   ↓
+Horizontal scaling + caching
+   ↓
+Need cache invalidation strategy
+```
+
+Another:
+
+```text
+Payment must never be duplicated
+   ↓
+Strong correctness requirement
+   ↓
+Idempotency + transactional design
+   ↓
+Slightly more complexity
+```
+
+That is **system design thinking**.
+
+---
+
+# Lesson 1 Exercise 🎯
+
+Let's now do this as a **real senior interview**.
+
+I'll give you only the requirement:
+
+> **"Design a ride-sharing system like Uber."**
+
+You are the candidate.
+
+Your first job is **NOT to draw the architecture**.
+
+Ask me **8–10 requirement questions**, covering:
+
+1. Core features
+2. Users
+3. Main workflows
+4. Scale
+5. Read/write
+6. Latency
+7. Consistency
+8. Availability
+9. Geography
+10. Out-of-scope items
+
+Write your questions as if you're speaking directly to the interviewer.
+
+Then I'll act as the interviewer and answer them **one by one**. After that, we'll move to **Lesson 2 — Capacity Estimation**, calculate the QPS ourselves, and use those numbers to drive the architecture.
+
