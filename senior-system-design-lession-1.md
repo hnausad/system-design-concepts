@@ -1,519 +1,234 @@
-Yes. For **senior system-design interviews**, I would not prepare by memorizing 20 architecture diagrams. Instead, learn a **repeatable design method** and then practice applying it to different systems.
+# Lesson 1 — Requirements Gathering
 
-Current interview guidance consistently emphasizes requirements, capacity estimation, APIs/data model, high-level architecture, deep dives, failure handling, and trade-offs. ([AlgoEngineer][1])
+This is **the most important first step in System Design**.
 
-# Senior System Design Interview Roadmap
+A common mistake is:
 
-For your preparation, I recommend this progression:
+> Interviewer: "Design WhatsApp."
 
-```text
-PHASE 1
-Think Like a System Designer
-        ↓
-PHASE 2
-Requirements Gathering
-        ↓
-PHASE 3
-Capacity Estimation
-        ↓
-PHASE 4
-Core Building Blocks
-        ↓
-PHASE 5
-Data & Storage
-        ↓
-PHASE 6
-Scalability
-        ↓
-PHASE 7
-Reliability & Failure Modes
-        ↓
-PHASE 8
-Distributed Systems
-        ↓
-PHASE 9
-Real System Designs
-        ↓
-PHASE 10
-Senior/Staff-Level Trade-offs
-```
-
-The important part is **not jumping directly to microservices**. You should first understand the problem, workload, constraints, and data flow; then decide whether a monolith, modular services, or microservices make sense.
-
----
-
-# 1. The Interview Framework
-
-For almost every system-design question, use this sequence:
-
-```text
-1. Requirements
-       ↓
-2. Capacity Estimation
-       ↓
-3. APIs
-       ↓
-4. Data Model
-       ↓
-5. High-Level Architecture
-       ↓
-6. Detailed Design
-       ↓
-7. Failure Handling
-       ↓
-8. Scalability
-       ↓
-9. Trade-offs
-```
-
-A typical 45-minute interview can roughly follow:
-
-| Phase                      |      Time |
-| -------------------------- | --------: |
-| Requirements               |     5 min |
-| Capacity estimation        |     5 min |
-| High-level design          |  8–10 min |
-| API + data model           |   5–7 min |
-| Deep dive                  | 12–15 min |
-| Failure/scaling/trade-offs |   5–7 min |
-
-These timings are broadly consistent with current interview frameworks. ([AlgoEngineer][1])
-
----
-
-# 2. Requirements Gathering
-
-Suppose interviewer says:
-
-> **"Design an e-commerce system."**
-
-Don't immediately draw:
-
-```text
-User → API Gateway → Microservices → Kafka → Redis → MongoDB
-```
-
-First ask questions.
-
-### Functional requirements
-
-```text
-Can users:
-- Browse products?
-- Search products?
-- Add to cart?
-- Place orders?
-- Make payments?
-- Track orders?
-```
-
-Then narrow the scope:
-
-> "For this interview, I'll focus primarily on product browsing, cart, checkout, and order processing."
-
-### Non-functional requirements
-
-Ask:
-
-```text
-How many users?
-How many requests/sec?
-Global or single region?
-Availability requirement?
-Latency requirement?
-Strong or eventual consistency?
-How much data?
-Read-heavy or write-heavy?
-```
-
-This is one of the strongest senior-level signals because the architecture should follow the requirements rather than the other way around. ([CertoJob][2])
-
----
-
-# 3. Capacity Estimation
-
-This is one of the areas I particularly recommend you master.
-
-Suppose:
-
-```text
-100 million users
-10 million DAU
-10 requests/user/day
-```
-
-Then:
-
-```text
-10M × 10
-= 100M requests/day
-```
-
-Average QPS:
-
-```text
-100M / 86,400
-≈ 1,157 QPS
-```
-
-Assume peak is 10× average:
-
-```text
-Peak ≈ 11,570 QPS
-```
-
-Now architectural decisions become much easier.
-
-For example:
-
-```text
-~1K QPS
-```
-
-doesn't require the same architecture as:
-
-```text
-~10M QPS
-```
-
-Capacity estimation should influence your database, cache, partitioning, number of servers, bandwidth, and queueing decisions. ([AlgoEngineer][1])
-
----
-
-# 4. APIs
-
-Next define the major APIs.
-
-For an order system:
-
-```http
-POST /orders
-GET  /orders/{orderId}
-POST /orders/{orderId}/cancel
-GET  /users/{userId}/orders
-```
-
-Don't create 50 APIs.
-
-Usually 3–6 important APIs are enough to establish the system's contract. ([SystemCity][3])
-
----
-
-# 5. Data Model
-
-Then ask:
-
-> What data do we need?
-
-For an e-commerce order:
-
-```text
-User
- └── userId
-
-Product
- ├── productId
- ├── name
- └── price
-
-Order
- ├── orderId
- ├── userId
- ├── status
- ├── totalAmount
- └── createdAt
-
-OrderItem
- ├── orderId
- ├── productId
- └── quantity
-```
-
-Then think about access patterns.
-
-For example:
-
-```text
-Get order by orderId
-Get orders by userId
-Update order status
-```
-
-Only after understanding access patterns should you decide between SQL, NoSQL, search indexes, etc.
-
----
-
-# 6. High-Level Architecture
-
-Now you can draw the architecture.
-
-For example:
-
-```text
-                   Users
-                     |
-                     ↓
-                Load Balancer
-                     |
-                     ↓
-                API Gateway
-                     |
-       +-------------+-------------+
-       |             |             |
-       ↓             ↓             ↓
-   User Service  Order Service  Product Service
-                     |
-          +----------+----------+
-          |                     |
-          ↓                     ↓
-       Redis                 Database
-                                |
-                           Read Replicas
-```
-
-Then introduce asynchronous processing:
-
-```text
-Order Service
-      |
-      ↓
-   Message Queue
-      |
-      +----------+-----------+
-      ↓          ↓           ↓
- Inventory    Payment    Notification
- Service      Service      Service
-```
-
-But don't introduce Kafka/Redis/etc. merely because they are popular.
-
-Explain **why**.
-
----
-
-# 7. Data Storage Decisions
-
-You should be comfortable answering:
-
-### SQL
-
-Use when you need:
-
-```text
-ACID
-Transactions
-Relationships
-Strong consistency
-Complex queries
-```
-
-Examples:
-
-```text
-PostgreSQL
-MySQL
-```
-
-### NoSQL
-
-Useful when you need:
-
-```text
-Massive scale
-High throughput
-Flexible schema
-Specific key-based access patterns
-```
-
-Examples:
-
-```text
-DynamoDB
-Cassandra
-MongoDB
-```
-
-### Redis
-
-Useful for:
-
-```text
-Caching
-Sessions
-Counters
-Rate limiting
-Distributed locks
-```
-
-### Object Storage
-
-For:
-
-```text
-Images
-Videos
-Documents
-Large files
-```
-
-### Search Engine
-
-For:
-
-```text
-Full-text search
-Filtering
-Ranking
-Faceted search
-```
-
----
-
-# 8. Caching
-
-You should be able to explain:
+Candidate immediately starts drawing:
 
 ```text
 Client
   ↓
-API
+API Gateway
+  ↓
+Microservices
+  ↓
+Kafka
   ↓
 Redis
-  ↓ cache miss
+  ↓
 Database
 ```
 
-And importantly:
+❌ Don't do this.
 
-> What happens when Redis fails?
+A senior engineer first asks:
 
-A senior answer:
-
-```text
-Redis unavailable
-       ↓
-Fallback to DB
-       ↓
-Higher latency
-       ↓
-Protect DB with rate limiting/circuit breaker
-```
-
-You should know:
-
-* Cache-aside
-* Write-through
-* Write-behind
-* TTL
-* Eviction
-* Cache invalidation
-* Cache stampede
-* Cache avalanche
-* Hot keys
+> **"What exactly are we building, for whom, at what scale, and what constraints matter?"**
 
 ---
 
-# 9. Messaging & Asynchronous Processing
+# 1. What is Requirements Gathering?
 
-Know when to move work out of the synchronous request.
+Requirements gathering means converting a vague problem statement into a **clear engineering problem**.
 
-Instead of:
+For example:
 
-```text
-POST /order
+> "Design an Uber-like system."
 
-Order
- ↓
-Payment
- ↓
-Inventory
- ↓
-Email
- ↓
-Response
-```
+This is too broad.
 
-you might do:
+We need to determine:
 
 ```text
-POST /order
-     ↓
-Create Order
-     ↓
-Publish Event
-     ↓
-Return response
-     
-       Queue
-         |
-    +----+----+----+
-    ↓    ↓    ↓
-Payment Inventory Email
+WHO?
+ ↓
+WHAT?
+ ↓
+HOW MUCH?
+ ↓
+HOW FAST?
+ ↓
+HOW RELIABLE?
+ ↓
+WHAT TRADE-OFFS?
 ```
-
-Then understand:
-
-* At-least-once delivery
-* Duplicate messages
-* Idempotency
-* Ordering
-* Consumer groups
-* Retry
-* Dead-letter queue
-* Backpressure
-* Queue backlog
 
 ---
 
-# 10. Failure Handling
+# 2. Two Types of Requirements
 
-This is where your previous question about **failure modes** becomes important.
+Every system-design problem has two major categories:
 
-For every major component ask:
+```text
+Requirements
+│
+├── Functional Requirements
+│
+└── Non-Functional Requirements
+```
 
-> **"What happens if this fails?"**
+---
+
+# 3. Functional Requirements
+
+Functional requirements answer:
+
+> **"What should the system DO?"**
+
+For an e-commerce system:
+
+```text
+User
+ │
+ ├── Register/Login
+ ├── Search products
+ ├── View product
+ ├── Add to cart
+ ├── Checkout
+ ├── Make payment
+ └── Track order
+```
+
+These are functionalities.
+
+### Example
+
+If interviewer says:
+
+> Design Amazon.
+
+You might ask:
+
+**Q: Can users search products?**
+
+Interviewer:
+
+> Yes.
+
+**Q: Can users add products to cart?**
+
+> Yes.
+
+**Q: Can users place orders?**
+
+> Yes.
+
+**Q: Do we need payment processing?**
+
+> Yes.
+
+**Q: Do we need seller management?**
+
+> No, keep it out of scope.
+
+Now you've reduced the problem.
+
+---
+
+# 4. Don't Design Everything
+
+This is extremely important in interviews.
+
+Suppose the interviewer says:
+
+> Design YouTube.
+
+You could potentially design:
+
+```text
+User
+Authentication
+Upload
+Video Processing
+Recommendation
+Search
+Comments
+Likes
+Subscriptions
+Notifications
+Advertising
+Payments
+Analytics
+Live Streaming
+Moderation
+...
+```
+
+That's enormous.
+
+Instead say:
+
+> "There are many components in YouTube. To keep the discussion focused, I'll concentrate on video upload, video processing, and video playback. I'll treat recommendations and advertising as out of scope unless you'd like me to cover them."
+
+🔥 **That's a senior-level response.**
+
+---
+
+# 5. How to Identify Functional Requirements
+
+Use this simple framework:
+
+```text
+Create
+Read
+Update
+Delete
+Search
+Process
+Notify
+```
+
+For example, an Order System:
+
+| Operation | Requirement         |
+| --------- | ------------------- |
+| Create    | Create order        |
+| Read      | Get order           |
+| Update    | Update order status |
+| Search    | Find user's orders  |
+| Process   | Process payment     |
+| Notify    | Notify user         |
+
+You don't need to literally say CRUD in every interview, but thinking this way helps you discover requirements.
+
+---
+
+# 6. Non-Functional Requirements
+
+Now comes the more important part for senior engineers.
+
+Non-functional requirements answer:
+
+> **"How well should the system work?"**
+
+Examples:
+
+```text
+Performance
+Scalability
+Availability
+Reliability
+Consistency
+Durability
+Security
+Latency
+Throughput
+Maintainability
+Cost
+```
+
+---
+
+# 7. Availability
+
+Ask:
+
+> **How available should the system be?**
 
 Example:
-
-```text
-Redis fails
-   ↓
-DB fallback
-
-DB replica fails
-   ↓
-Other replica
-
-Payment service fails
-   ↓
-Retry / queue / circuit breaker
-
-Consumer fails
-   ↓
-Another consumer processes message
-
-Region fails
-   ↓
-Traffic redirected
-```
-
-Senior candidates proactively discuss failure handling rather than waiting for the interviewer to ask. ([designgurus.substack.com][4])
-
----
-
-# 11. Distributed Systems
-
-Then learn the harder concepts:
-
-### Consistency
-
-```text
-Strong consistency
-Eventual consistency
-Read-after-write consistency
-```
-
-### Availability
 
 ```text
 99%
@@ -522,171 +237,218 @@ Read-after-write consistency
 99.999%
 ```
 
-### CAP
+These sound similar but are very different.
 
-Understand:
+Approximate yearly downtime:
 
-```text
-Consistency
-Availability
-Partition tolerance
-```
+| Availability | Downtime/year |
+| ------------ | ------------: |
+| 99%          |     3.65 days |
+| 99.9%        |    8.76 hours |
+| 99.99%       |  52.6 minutes |
+| 99.999%      |  5.26 minutes |
 
-### Distributed coordination
+So if the interviewer says:
 
-```text
-Leader election
-Quorum
-Consensus
-Distributed locks
-```
+> "The payment system needs 99.99% availability."
 
-### Distributed transactions
-
-```text
-Saga
-Outbox
-Idempotency
-Compensation
-```
+You immediately know reliability needs to be taken seriously.
 
 ---
 
-# 12. Scalability
+# 8. Latency
 
-You should be able to explain how the system changes from:
+Ask:
 
-```text
-10K users
-```
-
-to:
-
-```text
-10M users
-```
-
-to:
-
-```text
-1B users
-```
-
-### Vertical scaling
-
-```text
-Small server
-    ↓
-Bigger server
-```
-
-### Horizontal scaling
-
-```text
-        Load Balancer
-        /     |     \
-      App1   App2   App3
-```
-
-### Database scaling
-
-```text
-Primary
-  |
-  +---- Read Replica
-  |
-  +---- Read Replica
-```
-
-Eventually:
-
-```text
-Shard 1
-Shard 2
-Shard 3
-Shard 4
-```
-
----
-
-# 13. Hot Partition
-
-Very important for senior interviews.
-
-Suppose:
-
-```text
-Shard by userId
-```
-
-Normally:
-
-```text
-Shard 1 → 25%
-Shard 2 → 25%
-Shard 3 → 25%
-Shard 4 → 25%
-```
-
-But one celebrity/user generates enormous traffic:
-
-```text
-Shard 1 → 90%
-Shard 2 → 3%
-Shard 3 → 3%
-Shard 4 → 4%
-```
-
-Now you have a **hot partition**.
-
-You should be able to explain how you'd solve it.
-
----
-
-# 14. Observability
-
-Don't forget:
-
-```text
-Logs
-Metrics
-Traces
-Alerts
-Health checks
-```
+> **How quickly should the system respond?**
 
 For example:
 
 ```text
-Request
-   |
-   +---- API latency
-   +---- DB latency
-   +---- Cache latency
-   +---- Queue latency
-   +---- Error rate
+Search API
+p95 < 200 ms
 ```
 
-Important metrics:
+Important terms:
+
+### Average latency
 
 ```text
-QPS
-p50 latency
-p95 latency
-p99 latency
-Error rate
-CPU
-Memory
-DB connections
-Queue depth
-Cache hit ratio
+100 ms
+```
+
+But average can hide bad experiences.
+
+### p95
+
+95% of requests are faster than this.
+
+### p99
+
+99% of requests are faster than this.
+
+Example:
+
+```text
+p50 = 50 ms
+p95 = 150 ms
+p99 = 500 ms
+```
+
+That tells you there are some very slow requests.
+
+For senior interviews, get comfortable discussing **p95/p99**, not just average latency.
+
+---
+
+# 9. Throughput
+
+Throughput means:
+
+> **How much work can the system process per unit of time?**
+
+Examples:
+
+```text
+10,000 requests/sec
+50,000 messages/sec
+1 million events/sec
+```
+
+This will become important in **Lesson 2: Capacity Estimation**.
+
+---
+
+# 10. Scalability
+
+Ask:
+
+> **How many users do we expect?**
+
+Example:
+
+```text
+1 million users
+10 million users
+100 million users
+```
+
+But don't stop there.
+
+Ask:
+
+> "What's the expected growth over the next few years?"
+
+Because:
+
+```text
+Today
+1M users
+
+Tomorrow
+100M users
+```
+
+could completely change your architecture.
+
+---
+
+# 11. Consistency
+
+This is a very important senior-level question.
+
+Ask:
+
+> **Does the user need to immediately see the latest data?**
+
+Consider Instagram likes.
+
+Suppose:
+
+```text
+User A likes post
+       ↓
+Database updated
+       ↓
+User B sees old like count
+```
+
+Is that acceptable?
+
+Usually, temporary inconsistency might be acceptable.
+
+But consider:
+
+```text
+Bank balance
+Payment status
+Inventory quantity
+```
+
+Temporary incorrect information could be much more serious.
+
+So you need to determine:
+
+```text
+Strong consistency
+        vs
+Eventual consistency
 ```
 
 ---
 
-# 15. Security
+# 12. Durability
 
-Senior design should include:
+Ask:
+
+> **Can we ever lose data?**
+
+For example:
+
+### Social media likes
+
+Maybe losing a tiny amount of analytics data is tolerable.
+
+### Financial transaction
+
+Losing a transaction is unacceptable.
+
+Therefore:
+
+```text
+Payment
+ ↓
+Durability requirement = VERY HIGH
+```
+
+This affects:
+
+* Database choice
+* Replication
+* Backups
+* Disaster recovery
+* Write strategy
+
+---
+
+# 13. Security Requirements
+
+Ask:
+
+> Does the system contain sensitive information?
+
+For example:
+
+```text
+Payment
+Personal information
+Authentication
+Private messages
+Healthcare
+Financial data
+```
+
+Then consider:
 
 ```text
 Authentication
@@ -694,277 +456,414 @@ Authorization
 Encryption
 TLS
 Secrets management
+Audit logs
 Rate limiting
-Input validation
-Audit logging
 ```
 
-You don't need to spend 10 minutes on security unless it is central to the problem, but you should demonstrate awareness.
+You don't need to spend the entire interview discussing security unless it is central to the system.
 
 ---
 
-# 16. Cost
+# 14. Geographic Requirements
 
-A senior engineer should also ask:
+Ask:
 
-> "Do we really need this complexity?"
+> **Is this system global or regional?**
+
+For example:
+
+### Regional
+
+```text
+India
+  ↓
+Mumbai region
+  ↓
+Database
+```
+
+### Global
+
+```text
+              Global Users
+                   |
+          Global Load Balancer
+          /        |        \
+      US Region  EU Region  Asia Region
+```
+
+Global requirements introduce questions around:
+
+* Multi-region
+* Replication
+* Data locality
+* Latency
+* Disaster recovery
+
+---
+
+# 15. Read vs Write Ratio
+
+This is an excellent question.
+
+Suppose we're designing a product catalog.
+
+Maybe:
+
+```text
+Reads  = 95%
+Writes = 5%
+```
+
+That's **read-heavy**.
+
+Therefore caching and read replicas may be useful.
+
+But a logging system might be:
+
+```text
+Reads  = 10%
+Writes = 90%
+```
+
+That's **write-heavy**.
+
+The architecture may be very different.
+
+---
+
+# 16. Example: Design an E-Commerce System
+
+Let's conduct an actual interview.
+
+### Interviewer
+
+> Design an e-commerce system.
+
+### Bad candidate
+
+> I'll use microservices, Kafka, Redis, MongoDB and Kubernetes.
+
+❌ Too early.
+
+---
+
+### Senior candidate
+
+First:
+
+> "I'd like to clarify the requirements."
+
+Then ask:
+
+### Functional
+
+```text
+1. Can users browse products?
+2. Can users search?
+3. Can users add products to cart?
+4. Can users place orders?
+5. Do we need payment processing?
+6. Do we need inventory management?
+7. Do we need order tracking?
+```
+
+Suppose interviewer says:
+
+```text
+Yes to all except seller management.
+```
+
+Now scope:
+
+```text
+IN SCOPE
+──────────────
+Product browsing
+Search
+Cart
+Order
+Payment
+Inventory
+Order tracking
+
+OUT OF SCOPE
+──────────────
+Seller management
+Advertising
+Recommendation engine
+```
+
+---
+
+# 17. Now Ask Non-Functional Questions
+
+You:
+
+> "How many users should the system support?"
+
+Interviewer:
+
+> 100 million registered users.
+
+You:
+
+> "How many daily active users?"
+
+Interviewer:
+
+> 10 million.
+
+You:
+
+> "What's the expected peak traffic?"
+
+Interviewer:
+
+> Around 10× average.
+
+You:
+
+> "What's the latency requirement for product browsing?"
+
+Interviewer:
+
+> p95 below 200 ms.
+
+You:
+
+> "What availability do we need?"
+
+Interviewer:
+
+> 99.99%.
+
+You:
+
+> "Can product information be eventually consistent?"
+
+Interviewer:
+
+> Yes, except inventory during checkout.
+
+💡 Now you have meaningful architectural constraints.
+
+---
+
+# 18. Create an Interview Requirement Sheet
+
+During an interview, mentally create something like this:
+
+```text
+SYSTEM
+────────────────────────
+E-Commerce Platform
+
+FUNCTIONAL
+────────────────────────
+✓ Product browsing
+✓ Product search
+✓ Cart
+✓ Checkout
+✓ Payment
+✓ Inventory
+✓ Order tracking
+
+OUT OF SCOPE
+────────────────────────
+✗ Seller management
+✗ Recommendations
+✗ Advertising
+
+SCALE
+────────────────────────
+100M registered users
+10M DAU
+10× peak
+
+PERFORMANCE
+────────────────────────
+Product API: p95 < 200ms
+
+AVAILABILITY
+────────────────────────
+99.99%
+
+CONSISTENCY
+────────────────────────
+Product → Eventual
+Inventory → Stronger consistency
+
+DURABILITY
+────────────────────────
+Orders/Payments → Very high
+
+GEOGRAPHY
+────────────────────────
+Global
+
+READ/WRITE
+────────────────────────
+Product → Read-heavy
+Orders → Mixed
+```
+
+Now you can start designing.
+
+---
+
+# 19. The Magic Question: "What Matters Most?"
+
+Sometimes requirements conflict.
 
 For example:
 
 ```text
-Option A
-PostgreSQL
-1 server
-
-Cost: $
-Complexity: Low
-
-Option B
-Multi-region
-10 services
-Kafka
-Redis cluster
-Multiple databases
-
-Cost: $$$$
-Complexity: High
+Very low latency
+        +
+Strong consistency
+        +
+Very high availability
+        +
+Very low cost
 ```
 
-If 1,000 QPS is sufficient, don't automatically design for 10 million QPS.
+You probably can't maximize all four.
 
-That's an important senior-level trade-off.
+So ask:
 
----
+> **"Which requirement is the highest priority?"**
 
-# 17. The 20 Systems I Recommend You Master
+This leads naturally to **trade-offs**.
 
-Instead of trying to learn hundreds of designs, master these patterns:
-
-### Foundation
-
-1. URL Shortener
-2. Rate Limiter
-3. Distributed Cache
-4. File Storage System
-5. Notification System
-
-### Social / Consumer
-
-6. Instagram
-7. Twitter/X
-8. WhatsApp/Chat System
-9. YouTube/Video Streaming
-10. News Feed
-
-### E-commerce
-
-11. Amazon/E-commerce
-12. Shopping Cart
-13. Inventory System
-14. Order Management
-15. Payment System
-
-### Distributed Systems
-
-16. Distributed Job Scheduler
-17. Distributed Lock Service
-18. Message Queue
-19. Distributed ID Generator
-20. Search System
-
-These cover a very large number of reusable design patterns.
-
----
-
-# 18. The Most Important Part: Deep Dives
-
-Don't just memorize:
+For example:
 
 ```text
-API Gateway
- ↓
-Microservices
- ↓
-Kafka
- ↓
-Redis
- ↓
-Database
-```
-
-That is a **mid-level answer**.
-
-A senior interviewer will ask:
-
-> Why Kafka?
-
-> What happens if Kafka is unavailable?
-
-> How do you guarantee no duplicate payment?
-
-> How do you handle retries?
-
-> What happens if Redis goes down?
-
-> How do you shard the database?
-
-> How do you handle a hot partition?
-
-> What happens during a regional outage?
-
-> What's your consistency model?
-
-> Why SQL instead of NoSQL?
-
-> What happens at 10× traffic?
-
-That's where the interview is really decided. Current senior-level guidance specifically emphasizes deep dives, failure modes, trade-offs, and what happens at larger scale. ([AlgoEngineer][1])
-
----
-
-# Your Learning Path
-
-Given your previous questions around **requirements gathering, capacity estimation, microservices, and failure modes**, I suggest we learn this as a structured course rather than jumping between topics.
-
-### Phase 1 — Foundation
-
-**Lesson 1:** What is System Design?
-
-**Lesson 2:** Functional vs Non-functional Requirements
-
-**Lesson 3:** Requirements Gathering — interview questions
-
-**Lesson 4:** Capacity Estimation
-
-**Lesson 5:** QPS / TPS / DAU / MAU
-
-**Lesson 6:** Latency, throughput, availability
-
----
-
-### Phase 2 — Building Blocks
-
-**Lesson 7:** Load Balancer
-
-**Lesson 8:** API Gateway
-
-**Lesson 9:** Reverse Proxy
-
-**Lesson 10:** Caching / Redis
-
-**Lesson 11:** SQL vs NoSQL
-
-**Lesson 12:** Database Replication
-
-**Lesson 13:** Sharding
-
-**Lesson 14:** CDN
-
-**Lesson 15:** Message Queues / Kafka
-
----
-
-### Phase 3 — Distributed Systems
-
-**Lesson 16:** CAP Theorem
-
-**Lesson 17:** Consistency Models
-
-**Lesson 18:** Distributed Transactions
-
-**Lesson 19:** Saga Pattern
-
-**Lesson 20:** Outbox Pattern
-
-**Lesson 21:** Idempotency
-
-**Lesson 22:** Distributed Locks
-
-**Lesson 23:** Leader Election
-
-**Lesson 24:** Consensus / Quorum
-
----
-
-### Phase 4 — Reliability
-
-**Lesson 25:** All major failure modes
-
-**Lesson 26:** Retry + Exponential Backoff
-
-**Lesson 27:** Circuit Breaker
-
-**Lesson 28:** Bulkhead
-
-**Lesson 29:** Timeout
-
-**Lesson 30:** Rate Limiting
-
-**Lesson 31:** Backpressure
-
-**Lesson 32:** Disaster Recovery
-
-**Lesson 33:** Multi-region architecture
-
----
-
-### Phase 5 — Real Interview Designs
-
-Then we'll design systems **together**, one at a time:
-
-```text
-URL Shortener
-      ↓
-Rate Limiter
-      ↓
-Notification System
-      ↓
-WhatsApp
-      ↓
-Twitter
-      ↓
-Instagram
-      ↓
-YouTube
-      ↓
-Amazon
-      ↓
-Uber
-      ↓
 Payment System
+
+Priority:
+1. Correctness
+2. Durability
+3. Availability
+4. Latency
 ```
 
-For **each system**, I'll make you follow the same interview structure:
+Whereas:
 
 ```text
-1. Requirements
-2. Capacity estimation
-3. APIs
-4. Data model
-5. High-level architecture
-6. Read flow
-7. Write flow
-8. Database choice
-9. Cache
-10. Queue
-11. Scaling
-12. Failure modes
-13. Consistency
-14. Security
-15. Monitoring
-16. Trade-offs
-17. What happens at 10×?
-18. Interview questions
+Social Media Feed
+
+Priority:
+1. Availability
+2. Low latency
+3. Scalability
+4. Eventual consistency acceptable
 ```
 
-That is the approach I'd recommend for your target senior interviews: **learn the reasoning pattern first, then reuse it across systems**, rather than memorizing individual diagrams. ([Cornerman][5])
+---
 
-### Next lesson
+# 20. What NOT to Ask
 
-I recommend we start with **Lesson 1: Requirements Gathering**, and I'll teach it exactly as it happens in a senior system-design interview, including **what questions you should ask, what answers you should expect, and how each answer changes the architecture**.
+Avoid asking 30 questions one after another.
 
-[1]: https://algoengineer.com/blog/system-design-interview-framework?utm_source=chatgpt.com "The System Design Interview Framework: A Step-by-Step Guide (2026) | AlgoEngineer"
-[2]: https://certojob.com/interviews/technical-interviews/system-design-interview-framework-complete-approach?utm_source=chatgpt.com "System Design Interview Framework: The Complete Structured Approach | CertoJob"
-[3]: https://systemcity.io/system-design-interview?utm_source=chatgpt.com "System Design Interview Prep Guide (2026) · SystemCity"
-[4]: https://designgurus.substack.com/p/20-system-design-interview-questions?utm_source=chatgpt.com "Senior System Design Interviews: 20 Questions and the Trade-Offs Behind Them"
-[5]: https://trycornerman.com/blog/system-design-interview-frameworks?utm_source=chatgpt.com "System Design Interview Frameworks That Actually Survive Follow-Up Questions | Cornerman | Cornerman"
+Bad:
+
+```text
+How many users?
+What database?
+What cloud?
+How many servers?
+What programming language?
+What cache?
+What queue?
+What region?
+What protocol?
+...
+```
+
+Some of these aren't requirements.
+
+Instead, ask questions that **change your architecture**.
+
+That's the key.
+
+---
+
+# 21. The Senior-Level Requirements Checklist
+
+Memorize this:
+
+```text
+             REQUIREMENTS
+                   │
+       ┌───────────┴───────────┐
+       │                       │
+ FUNCTIONAL              NON-FUNCTIONAL
+       │                       │
+       ├─ Users                ├─ Scale
+       ├─ Features             ├─ Availability
+       ├─ APIs                 ├─ Latency
+       ├─ Workflows            ├─ Throughput
+       └─ Scope                ├─ Consistency
+                               ├─ Durability
+                               ├─ Security
+                               ├─ Geography
+                               └─ Cost
+```
+
+Then ask:
+
+```text
+READ vs WRITE?
+STRONG vs EVENTUAL CONSISTENCY?
+REGIONAL vs GLOBAL?
+NORMAL vs PEAK TRAFFIC?
+WHAT IS OUT OF SCOPE?
+WHAT IS THE HIGHEST PRIORITY?
+```
+
+---
+
+# 22. A Very Important Interview Technique
+
+Don't just ask a question.
+
+Explain **why you're asking it**.
+
+Instead of:
+
+> "How many users?"
+
+Say:
+
+> "I'd like to understand the expected user and traffic scale because that will influence whether we need horizontal scaling, caching, database partitioning, and potentially multiple regions."
+
+🔥 This demonstrates engineering thinking.
+
+---
+
+# 23. Your First Practice Exercise
+
+Let's simulate the interview.
+
+### Interviewer:
+
+> **"Design a URL Shortener like Bitly."**
+
+Don't design it yet.
+
+As the candidate, your **first response should be requirements questions**.
+
+For example:
+
+```text
+1. ...
+2. ...
+3. ...
+4. ...
+5. ...
+```
+
+Try to ask me **5–8 requirements questions** as if I were the interviewer.
+
+I'll answer each one, and then we'll continue the interview step-by-step into **Lesson 2: Capacity Estimation**, using the answers we establish.
